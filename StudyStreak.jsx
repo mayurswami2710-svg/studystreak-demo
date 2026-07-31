@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function StudyStreak() {
   // ---------------------------------------------------------------------------
   // 1. CONSTANTS & INITIAL STATE (with LocalStorage persistence)
   // ---------------------------------------------------------------------------
-  const WORK_TIME = 25 * 60;       // 25 mins
-  const SHORT_BREAK = 5 * 60;      // 5 mins
-  const LONG_BREAK = 15 * 60;      // 15 mins
+  const WORK_TIME = 25 * 60; // 25 mins
+  const SHORT_BREAK = 5 * 60; // 5 mins
+  const LONG_BREAK = 15 * 60; // 15 mins
 
   const [timerMode, setTimerMode] = useState('work'); // 'work', 'shortBreak', 'longBreak'
-  
+
   const [timeLeft, setTimeLeft] = useState(() => {
     const saved = localStorage.getItem('studyStreak_timeLeft');
     return saved ? parseInt(saved, 10) : WORK_TIME;
@@ -24,17 +24,94 @@ export default function StudyStreak() {
 
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('studyStreak_tasks');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, text: 'Review React state management hooks', completed: true },
-      { id: 2, text: 'Complete Data Structures assignment', completed: false },
-      { id: 3, text: 'Prepare presentation notes for Edu on Air', completed: false },
-    ];
+    return saved
+      ? JSON.parse(saved)
+      : [
+          {
+            id: 1,
+            text: 'Review React state management hooks',
+            completed: true,
+          },
+          {
+            id: 2,
+            text: 'Complete Data Structures assignment',
+            completed: false,
+          },
+          {
+            id: 3,
+            text: 'Prepare presentation notes for Edu on Air',
+            completed: false,
+          },
+        ];
   });
 
   const [newTaskText, setNewTaskText] = useState('');
 
+  // Track initial starting time to measure 10-minute intervals precisely
+  const initialTimeRef = useRef(WORK_TIME);
+
   // ---------------------------------------------------------------------------
-  // 2. PERSISTENCE EFFECTS
+  // 2. AUDIO GENERATOR (Web Audio API - No External Assets Required)
+  // ---------------------------------------------------------------------------
+
+  // 10-Minute Pop Sound
+  const playPopSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    } catch (err) {
+      console.log('Audio playback failed:', err);
+    }
+  };
+
+  // Completion Alarm Sound
+  const playCompletionSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+
+      const playBeep = (freq, time, duration) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, time);
+
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(time);
+        osc.stop(time + duration);
+      };
+
+      // Two-tone chime alert
+      playBeep(523.25, ctx.currentTime, 0.15); // Note C5
+      playBeep(659.25, ctx.currentTime + 0.2, 0.3); // Note E5
+    } catch (err) {
+      console.log('Audio playback failed:', err);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // 3. PERSISTENCE EFFECTS
   // ---------------------------------------------------------------------------
   useEffect(() => {
     localStorage.setItem('studyStreak_tasks', JSON.stringify(tasks));
@@ -49,24 +126,37 @@ export default function StudyStreak() {
   }, [timeLeft]);
 
   // ---------------------------------------------------------------------------
-  // 3. TIMER LOGIC & BROWSER TITLE SYNC
+  // 4. TIMER LOGIC & AUDIO ALERTS
   // ---------------------------------------------------------------------------
   useEffect(() => {
     let interval = null;
 
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const nextTime = prev - 1;
+          const elapsedTime = initialTimeRef.current - nextTime;
+
+          // 🔊 Play POP sound every 10 minutes (600 seconds)
+          if (elapsedTime > 0 && elapsedTime % 600 === 0) {
+            playPopSound();
+          }
+
+          return nextTime;
+        });
       }, 1000);
     } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
-      
-      // Auto-switch mode when timer finishes
+
+      // 🔊 Play Completion Alarm
+      playCompletionSound();
+
+      // Auto-switch mode
       if (timerMode === 'work') {
-        alert('🎉 Work session complete! Take a break.');
+        alert('🎉 Work session complete! Time for a break.');
         switchMode('shortBreak');
       } else {
-        alert('⚡ Break is over! Time to get back to work.');
+        alert('⚡ Break is over! Back to work.');
         switchMode('work');
       }
     }
@@ -74,35 +164,44 @@ export default function StudyStreak() {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, timerMode]);
 
-  // Dynamic Browser Tab Title Sync
+  // Browser Tab Title Sync
   useEffect(() => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
-    const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    document.title = isRunning 
-      ? `(${formattedTime}) StudyStreak App` 
+    const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+
+    document.title = isRunning
+      ? `(${formattedTime}) StudyStreak App`
       : 'StudyStreak App';
   }, [timeLeft, isRunning]);
 
   // ---------------------------------------------------------------------------
-  // 4. HANDLERS
+  // 5. HANDLERS
   // ---------------------------------------------------------------------------
   const switchMode = (mode) => {
     setIsRunning(false);
     setTimerMode(mode);
-    if (mode === 'work') setTimeLeft(WORK_TIME);
-    if (mode === 'shortBreak') setTimeLeft(SHORT_BREAK);
-    if (mode === 'longBreak') setTimeLeft(LONG_BREAK);
+
+    let duration = WORK_TIME;
+    if (mode === 'shortBreak') duration = SHORT_BREAK;
+    if (mode === 'longBreak') duration = LONG_BREAK;
+
+    setTimeLeft(duration);
+    initialTimeRef.current = duration;
   };
 
   const toggleTimer = () => setIsRunning((prev) => !prev);
 
   const resetTimer = () => {
     setIsRunning(false);
-    if (timerMode === 'work') setTimeLeft(WORK_TIME);
-    if (timerMode === 'shortBreak') setTimeLeft(SHORT_BREAK);
-    if (timerMode === 'longBreak') setTimeLeft(LONG_BREAK);
+    let duration = WORK_TIME;
+    if (timerMode === 'shortBreak') duration = SHORT_BREAK;
+    if (timerMode === 'longBreak') duration = LONG_BREAK;
+
+    setTimeLeft(duration);
+    initialTimeRef.current = duration;
   };
 
   const handleAddTask = (e) => {
@@ -134,15 +233,17 @@ export default function StudyStreak() {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
   };
 
   // ---------------------------------------------------------------------------
-  // 5. RENDER UI
+  // 6. RENDER UI
   // ---------------------------------------------------------------------------
   return (
     <div style={styles.container}>
-      {/* App Header */}
+      {/* Header */}
       <header style={styles.header}>
         <h1 style={styles.title}>StudyStreak App</h1>
         <div style={styles.streakBadge}>🔥 {streak} Day Streak</div>
@@ -150,7 +251,7 @@ export default function StudyStreak() {
 
       {/* Timer Card */}
       <div style={styles.card}>
-        {/* Mode Selectors (Breaks Controls) */}
+        {/* Mode Switchers */}
         <div style={styles.modeToggleGroup}>
           <button
             onClick={() => switchMode('work')}
@@ -160,13 +261,17 @@ export default function StudyStreak() {
           </button>
           <button
             onClick={() => switchMode('shortBreak')}
-            style={timerMode === 'shortBreak' ? styles.activeModeBtn : styles.modeBtn}
+            style={
+              timerMode === 'shortBreak' ? styles.activeModeBtn : styles.modeBtn
+            }
           >
             Short Break (5m)
           </button>
           <button
             onClick={() => switchMode('longBreak')}
-            style={timerMode === 'longBreak' ? styles.activeModeBtn : styles.modeBtn}
+            style={
+              timerMode === 'longBreak' ? styles.activeModeBtn : styles.modeBtn
+            }
           >
             Long Break (15m)
           </button>
@@ -179,7 +284,7 @@ export default function StudyStreak() {
           {timerMode === 'longBreak' && 'Long Break'}
         </h2>
 
-        {/* Dynamic Countdown Display */}
+        {/* Countdown Timer */}
         <div style={styles.timerDisplay}>{formatTime(timeLeft)}</div>
 
         {/* Action Controls */}
@@ -252,7 +357,7 @@ export default function StudyStreak() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. STYLES
+// STYLES
 // ---------------------------------------------------------------------------
 const styles = {
   container: {
