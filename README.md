@@ -37,3 +37,10 @@ To run this project locally on your system:
 1. **Clone the repository:**
    ```bash
    git clone [https://github.com/mayurswami2710-svg/studystreak-demo.git](https://github.com/mayurswami2710-svg/studystreak-demo.git)
+<img width="1910" height="1191" alt="image" src="https://github.com/user-attachments/assets/ca948b8d-1530-4a3e-8c54-616a4c6b11c1" />
+<img width="1917" height="1196" alt="image" src="https://github.com/user-attachments/assets/09c16ac1-269d-41b7-bfad-d056a0f4d79d" />
+<img width="1917" height="1196" alt="image" src="https://github.com/user-attachments/assets/fe9c27fc-0497-4376-8d2b-eea890aae2f6" />
+<img width="1917" height="1195" alt="image" src="https://github.com/user-attachments/assets/5fbdb0ef-2138-45ce-bdaa-72ce6459dcef" />
+
+
+
