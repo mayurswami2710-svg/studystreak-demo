@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
 export default function App() {
-  // Pomodoro Timer State
+  // --- STATE MANAGEMENT ---
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [timerMode, setTimerMode] = useState('work'); // 'work' or 'break'
 
-  // Task Checklist State
   const [tasks, setTasks] = useState([
     { id: 1, text: 'Review React state management hooks', completed: true },
     { id: 2, text: 'Complete Data Structures assignment', completed: false },
-    { id: 3, text: 'Prepare presentation notes for Edu on Air', completed: false },
+    {
+      id: 3,
+      text: 'Prepare presentation notes for Edu on Air',
+      completed: false,
+    },
   ]);
   const [newTaskText, setNewTaskText] = useState('');
 
-  // Timer Effect
+  // --- TIMER EFFECT ---
   useEffect(() => {
     let interval = null;
     if (isRunning && timeLeft > 0) {
@@ -24,11 +27,11 @@ export default function App() {
     } else if (timeLeft === 0) {
       setIsRunning(false);
       if (timerMode === 'work') {
-        alert('Pomodoro session complete! Take a well-deserved 5-minute break.');
+        alert('Pomodoro session complete! Take a 5-minute break.');
         setTimerMode('break');
         setTimeLeft(5 * 60);
       } else {
-        alert('Break finished! Ready to dive back into work?');
+        alert('Break finished! Ready to work?');
         setTimerMode('work');
         setTimeLeft(25 * 60);
       }
@@ -36,11 +39,13 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, timerMode]);
 
-  // Helper Functions
+  // --- HELPER FUNCTIONS ---
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
   };
 
   const resetTimer = () => {
@@ -50,23 +55,25 @@ export default function App() {
 
   const toggleTask = (id) => {
     setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
+      tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
     );
   };
 
   const addTask = (e) => {
     e.preventDefault();
     if (!newTaskText.trim()) return;
-    setTasks([...tasks, { id: Date.now(), text: newTaskText, completed: false }]);
+    setTasks([
+      ...tasks,
+      { id: Date.now(), text: newTaskText, completed: false },
+    ]);
     setNewTaskText('');
   };
 
   const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+    setTasks(tasks.filter((t) => t.id !== id));
   };
 
+  // --- RENDER COMPONENT ---
   return (
     <div
       style={{
@@ -79,12 +86,14 @@ export default function App() {
       }}
     >
       <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <h1 style={{ color: '#38BDF8', marginBottom: '8px' }}>StudyStreak App</h1>
+        <h1 style={{ color: '#38BDF8', marginBottom: '8px' }}>
+          StudyStreak App
+        </h1>
         <p style={{ fontSize: '18px', color: '#F97316', marginBottom: '24px' }}>
           🔥 5 Day Streak
         </p>
 
-        {/* Timer Card */}
+        {/* TIMER SECTION */}
         <div
           style={{
             background: '#1E293B',
@@ -108,7 +117,9 @@ export default function App() {
           >
             {formatTime(timeLeft)}
           </div>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <div
+            style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}
+          >
             <button
               onClick={() => setIsRunning(!isRunning)}
               style={{
@@ -140,7 +151,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Task List Card */}
+        {/* TASKS SECTION */}
         <div
           style={{
             background: '#1E293B',
@@ -152,7 +163,10 @@ export default function App() {
         >
           <h2 style={{ marginTop: 0, textAlign: 'center' }}>Study Tasks</h2>
 
-          <form onSubmit={addTask} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <form
+            onSubmit={addTask}
+            style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}
+          >
             <input
               type="text"
               placeholder="Add a new task..."
@@ -183,7 +197,9 @@ export default function App() {
             </button>
           </form>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
+          >
             {tasks.map((task) => (
               <div
                 key={task.id}
